@@ -1,0 +1,7 @@
+# dim
+#
+# This script will set the tty screen to medium brightness originally done
+# LGD Sat Nov 16 xx:xx:xx PST 2013
+#
+
+setterm --bold off 

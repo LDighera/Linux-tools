@@ -1,0 +1,56 @@
+d() {
+  # 1) If an argument is given, cd to it.
+  if [ $# -gt 0 ]; then
+    cd -- "$1" || return 1
+    return 0
+  fi
+
+  # 2) Build the subdirectory list into "$@" (POSIX, no arrays).
+  set --  # reset positional params
+  for d in ./*/; do
+    [ -d "$d" ] || continue
+    set -- "$@" "${d%/}"
+  done
+
+  # 3) If exactly one subdirectory, cd to it.
+  if [ $# -eq 1 ]; then
+    cd -- "$1" || return 1
+    return 0
+  fi
+
+  # 4) Interactive selection while more than one subdir exists.
+  while [ $# -gt 1 ]; do
+    printf '\nSubdirectories below %s:\n\n' "$PWD" >&2
+    i=1
+    for sd in "$@"; do
+      printf '%d) %s\n' "$i" "$sd" >&2
+      i=$((i+1))
+    done
+    printf '\nSelect a subdirectory (q to quit): ' >&2
+    IFS= read -r ans || break
+    [ "$ans" = "q" ] && break
+    case $ans in
+      ''|*[!0-9]*) break ;;
+      *) idx=$ans ;;
+    esac
+    if [ "$idx" -ge 1 ] && [ "$idx" -le $# ]; then
+      i=1
+      for sd in "$@"; do
+        if [ $i -eq "$idx" ]; then sel=$sd; break; fi
+        i=$((i+1))
+      done
+      cd -- "$sel" || break
+      # Rebuild list after cd
+      set --
+      for d in ./*/; do
+        [ -d "$d" ] || continue
+        set -- "$@" "${d%/}"
+      done
+      [ $# -le 1 ] && break
+    else
+      break
+    fi
+  done
+
+  return 0
+}

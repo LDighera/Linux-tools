@@ -1,0 +1,7 @@
+# bright
+#
+# This script will set the tty screen to full brightness
+# LGD Sat Nov 16 xx:xx:xx PST 2013
+#
+
+setterm --bold on

@@ -1,0 +1,88 @@
+: nowspell
+#	This script will lookup words in the dictionary.
+#
+#	Copyright Dighera Data Services December 19, 1986
+#	
+#	May 12, 1987: added help function (LGD)
+#	November 12, 1987: added local add message (LGD)
+#	December 6, 1987: replaced grep with look command, thus Xenix only (LGD)
+#	May 9, 1988: fixed sort bug that destroyed LOCALDICT file (LGD)
+#
+
+# VARIABLES
+DICTDIR="/usr/dict/"		# The directory containing the main dictionary
+DICT=words			# The main dictionary file
+LOCALDICT=/usr/dict/words.local	# Optional dictionary of local words
+NAME=`basename $0`		# Command name saved for use in help function
+PAGER="| /usr/bin/less"		# If defined, will pipe output through
+# PAGER=
+
+# FUNCTIONS
+help (){
+echo "\014"
+cat << EOF
+			     H E L P
+
+
+	$NAME looks up words in the dictionary and allows
+	you to maintain a local word list.
+
+	Use:
+		$NAME string 
+
+	to display all words in which string can be found.
+  
+
+	The -a option will add a word to the local dictionary:
+
+		$NAME -a string
+
+EOF
+}
+
+if [ $# = 0 ]
+then
+	echo "Usage: $NAME [-a] spell-string\n       $NAME -help"
+else
+sort -c $LOCALDICT -o$LOCALDICT || sort -o$LOCALDICT $LOCALDICT
+case $1 in
+	-[aA]) if [ -n "$2" ]
+		then
+ 			[ ! "`fgrep -x $2 $LOCALDICT`" = $2 ] || { echo "\n$NAME: \"$2\" already exists in $LOCALDICT"; exit 1 ; }
+			if [ -w $LOCALDICT ]
+			then
+#				echo "$2" >> $LOCALDICT
+				echo $2 | sort -m -o$LOCALDICT - $LOCALDICT
+#				sort -o$LOCALDICT $LOCALDICT
+				echo "$2 added to $LOCALDICT"
+			else
+				echo "\n$NAME: cannot write in $LOCALDICT"
+			fi
+		else
+			echo "\n$NAME: no word specified to add to $LOCALDICT"
+		fi;;
+	-[hH]*) help;;
+	"") echo "\n$NAME: no argument";;
+	*) echo "\nScanning $DICTDIR$DICT for words containing: $1\n";
+#		eval grep -y $1 $DICTDIR$DICT "$PAGER";
+		eval look $1 "$PAGER";
+	if [ -r $LOCALDICT ]
+	then
+		echo "Local words:"
+#		grep -y $1 $LOCALDICT
+		look $1 $LOCALDICT
+	elif [ ! -f $LOCALDICT ]
+	then
+		echo "\n A dictionary of local words does not exist."
+		echo "Would you like to create one now (y,N)? \c"
+		read CHOICE
+		case $CHOICE in
+			[yY]*) umask 111; touch $LOCALDICT;;
+			*) :;;
+		esac
+	else
+		echo "\n$NAME: Cannot open $LOCALDICT"
+
+	fi;;
+esac
+fi

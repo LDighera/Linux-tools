@@ -1,0 +1,1 @@
+export PS1='${PWD} (`tty|cut -d/ -f 3-4 |tr -d /`) # '

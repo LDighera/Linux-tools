@@ -1,0 +1,372 @@
+# LGD: Sun Oct 19 07:56:13 AM PDT 2025
+# This script will display a six-column list of directory content.
+#
+
+ls -p $* | pr -6 -t -w80
+
+
+exit
+
+l6() {
+  local cols=6 w=${COLUMNS:-$(tput cols 2>/dev/null || echo 80)} trunc=0
+  while getopts ":tw:c:" opt; do
+    case $opt in
+      t) trunc=1 ;;        # enable truncation with ellipsis
+      w) w=$OPTARG ;;      # override terminal width
+      c) cols=$OPTARG ;;   # override number of columns
+    esac
+  done
+  shift $((OPTIND-1))
+  local colw=$(( w / cols )); (( colw<=2 )) && colw=3
+
+  ls -p --color=always -- "$@" | awk -v cols="$cols" -v w="$w" -v colw="$colw" -v trunc="$trunc" '
+    function isesc(s,  m){ return match(s, /^\033\[[0-9;]*m/) }          # CSI matcher
+    function vislen(s,  t){ t=s; gsub(/\033\[[0-9;]*m/,"",t); return length(t) }
+    function viscut(s, width,    out,seen,seg) {                          # cut colored string by visible width
+      while (s != "" && seen < width) {
+        if (isesc(s)) { out = out substr(s, 1, RLENGTH); s = substr(s, RLENGTH+1) }
+        else { out = out substr(s,1,1); s = substr(s,2); ++seen }
+      }
+      return out
+    }
+    { raw[i]=$0; vis[i]=$0; gsub(/\033\[[0-9;]*m/, "", vis[i]); isdir[i]=(vis[i] ~ /\/$/); i++ }
+    END{
+      n=i; if(n==0) exit
+      rows = int((n + cols - 1) / cols)
+
+      # compute per-column width based on visible lengths
+      for (c=0; c<cols; c++) {
+        wcol[c]=0
+        for (r=0; r<rows; r++) {
+          idx = r + c*rows
+          if (idx<n) {
+            l = vislen(vis[idx])
+            if (trunc && l > colw-1) l = colw-1
+            if (l > wcol[c]) wcol[c]=l
+          }
+        }
+        wcol[c]++   # 1 space between columns
+      }
+
+      for (r=0; r<rows; r++) {
+        for (c=0; c<cols; c++) {
+          idx = r + c*rows
+          if (idx<n) {
+            out = raw[idx]; v = vis[idx]; needslash = isdir[idx]?1:0
+            if (trunc) {
+              eff = wcol[c]-1; if (eff<1) eff=1
+              avail = eff
+              if (needslash && avail>=2) avail--               # reserve for '/'
+              if (vislen(v) > avail) {
+                # colored truncation + ellipsis
+                out = viscut(raw[idx], (avail>=2 ? avail-1 : avail))
+                if (avail>=2) out = out "…"
+                if (needslash) {
+                  # ensure trailing slash is visible
+                  if (vislen(out) >= eff) out = viscut(out, eff-1) "/"
+                  else out = out "/"
+                }
+              } else if (needslash) {
+                # name fits; keep trailing slash (already present)
+              }
+            }
+            # print name and reset color so padding isn’t colored
+            printf "%s\033[0m", out
+            pad = wcol[c] - vislen(v)
+            if (trunc && vislen(v) > (wcol[c]-1)) pad = wcol[c] - eff
+            if (pad<1) pad=1
+            if (c<cols-1) printf "%" pad "s", ""
+          }
+        }
+        print ""
+      }
+    }'
+}
+
+
+--------------------- colorized six-column listing without file/directory name truncation ------------
+
+# l6c: "list 6 columns, compact" – strict per-column width with truncation
+l6c() {
+  local cols=6 w=${COLUMNS:-$(tput cols 2>/dev/null || echo 80)} OPTIND opt
+  while getopts ":w:c:" opt; do
+    case $opt in
+      w) w=$OPTARG ;;         # override terminal width
+      c) cols=$OPTARG ;;      # override number of columns
+    esac
+  done
+  shift $((OPTIND-1))
+
+  # fixed per-column width (1 space reserved for inter-column gap)
+  local colw=$(( w / cols )); (( colw < 3 )) && colw=3
+
+  ls -p --color=always -- "$@" | awk -v cols="$cols" -v colw="$colw" '
+    function strip(s, t){ t=s; gsub(/\033\[[0-9;]*m/,"",t); return t }
+    function vislen(s){ return length(strip(s)) }
+    function take_vis(raw, n,    out,s,seen) {  # take n visible chars from colored string
+      out=""; s=raw; seen=0
+      while (s!="" && seen<n) {
+        if (match(s, /^\033\[[0-9;]*m/)) { out = out substr(s,1,RLENGTH); s = substr(s,RLENGTH+1) }
+        else { out = out substr(s,1,1); s = substr(s,2); ++seen }
+      }
+      return out
+    }
+    function trunc_cell(raw, needslash, width,    avail, base, out) {
+      # width is full column width minus the inter-column space we add separately
+      # reserve 1 char for slash if needed
+      avail = width - (needslash ? 1 : 0)
+      if (avail < 1) avail = 1
+
+      if (vislen(raw) > avail) {
+        # leave room for ellipsis if avail>=2
+        if (avail >= 2) {
+          base = take_vis(raw, avail-1)
+          out  = base "…"
+        } else {
+          out  = take_vis(raw, avail)  # no room for ellipsis
+        }
+      } else {
+        out = raw
+      }
+      if (needslash) {
+        # ensure visible trailing slash even after truncation
+        if (vislen(out) >= width) out = take_vis(out, width-1) "/"
+        else out = out "/"
+      }
+      return out
+    }
+
+    { raw[n]=$0; plain=strip($0); isdir[n]=(plain ~ /\/$/); n++ }
+
+    END{
+      if (n==0) exit
+      rows = int((n + cols - 1) / cols)
+      for (r=0; r<rows; r++) {
+        for (c=0; c<cols; c++) {
+          idx = r + c*rows
+          if (idx < n) {
+            cell = trunc_cell(raw[idx], isdir[idx], colw-1)
+            printf "%s\033[0m", cell
+            # pad to fixed width (based on visible len after truncation)
+            pad = colw - vislen(cell); if (pad < 1) pad = 1
+            if (c < cols-1) printf "%" pad "s",""
+          }
+        }
+        print ""
+      }
+    }'
+}
+
+------------------- compact, always-truncate variant strict 6-column grid ------------
+
+# l6t: 6 columns, compact, always truncates to fit width
+l6t() {
+  local cols=6 w=80 OPTIND opt
+  while getopts ":w:c:" opt; do
+    case $opt in
+      w) w=$OPTARG ;;       # terminal width (default 80)
+      c) cols=$OPTARG ;;    # number of columns (default 6)
+    esac
+  done
+  shift $((OPTIND-1))
+
+  local colw=$(( w / cols ))            # total width per column incl. 1 space gap
+  (( colw < 4 )) && colw=4              # keep it usable
+  local contentw=$(( colw - 1 ))        # visible chars per cell (last char = inter-column space)
+
+  ls -p --color=always -- "$@" | awk -v cols="$cols" -v contentw="$contentw" '
+    function strip(s,t){ t=s; gsub(/\033\[[0-9;]*m/, "", t); return t }
+    function vislen(s){ return length(strip(s)) }
+    function take_vis(raw, n,  out,s,seen) {   # take n visible chars from colored string
+      out=""; s=raw; seen=0
+      while (s!="" && seen<n) {
+        if (match(s, /^\033\[[0-9;]*m/)) { out=out substr(s,1,RLENGTH); s=substr(s,RLENGTH+1) }
+        else { out=out substr(s,1,1); s=substr(s,2); ++seen }
+      }
+      return out
+    }
+    function trunc_cell(raw, isdir,  avail, out, plain, needslash) {
+      plain = strip(raw); needslash = isdir ? 1 : 0
+      avail = contentw - needslash; if (avail < 1) avail = 1
+      if (vislen(plain) > avail) {
+        if (avail >= 2) { out = take_vis(raw, avail-1) "…" } else { out = take_vis(raw, avail) }
+      } else {
+        out = raw
+      }
+      if (needslash) {
+        if (vislen(out) >= contentw) out = take_vis(out, contentw-1) "/"
+        else out = out "/"
+      }
+      return out
+    }
+
+    { raw[n]=$0; plain=strip($0); isdir[n]=(plain ~ /\/$/); n++ }
+
+    END{
+      if (!n) exit
+      rows = int((n + cols - 1) / cols)
+      for (r=0; r<rows; r++) {
+        for (c=0; c<cols; c++) {
+          idx = r + c*rows
+          if (idx < n) {
+            cell = trunc_cell(raw[idx], isdir[idx])
+            printf "%s\033[0m", cell                # reset so padding is not colored
+            pad = contentw - vislen(cell); if (pad < 1) pad = 1
+            if (c < cols-1) printf "%" pad "s",""  # inter-column space
+          }
+        }
+        print ""
+      }
+    }'
+}
+
+---------------- l6t ----------------
+
+l6t(){ local cols=6 w=${COLUMNS:-80} OPTIND opt; while getopts ":w:c:" opt; do case $opt in w) w=$OPTARG;; c) cols=$OPTARG;; esac; done; shift $((OPTIND-1)); local colw=$(( w / cols )); (( colw<4 )) && colw=4; local cw=$(( colw - 1 )); ls -p --color=always -- "$@" | awk -v cols="$cols" -v cw="$cw" 'function S(s){t=s;gsub(/\033\[[0-9;]*m/,"",t);return t} function VL(s){t=s;gsub(/\033\[[0-9;]*m/,"",t);return length(t)} function TV(raw,n, o,x,c){o="";x=raw;c=0;while(x!=""&&c<n){if(match(x,/^\033\[[0-9;]*m/)){o=o substr(x,1,RLENGTH);x=substr(x,RLENGTH+1)}else{o=o substr(x,1,1);x=substr(x,2);++c}}return o} function TC(raw,isdir, avail,out,plain,need){plain=S(raw);need=isdir?1:0;avail=cw-need;if(avail<1)avail=1;if(VL(plain)>avail){if(avail>=2){out=TV(raw,avail-1)"…"}else{out=TV(raw,avail)}}else{out=raw} if(need){if(VL(out)>=cw)out=TV(out,cw-1)"/";else out=out"/"} return out} {raw[n]=$0; plain=S($0); isdir[n]=(plain~/\/$/); n++} END{if(!n)exit; rows=int((n+cols-1)/cols); for(r=0;r<rows;r++){for(c=0;c<cols;c++){idx=r+c*rows; if(idx<n){cell=TC(raw[idx],isdir[idx]); printf "%s\033[0m",cell; pad=cw-VL(cell); if(pad<1)pad=1; if(c<cols-1)printf "%" pad "s",""}} print ""}}'; }
+
+-------------- l6c -----------
+
+# l6c: 6 columns, compact, truncates cleanly without ellipses
+l6c(){ 
+  local cols=6 w=${COLUMNS:-80} OPTIND opt
+  while getopts ":w:c:" opt; do case $opt in
+    w) w=$OPTARG;; c) cols=$OPTARG;;
+  esac; done
+  shift $((OPTIND-1))
+  local cw=$(( (w/cols)-1 )); ((cw<2))&&cw=2
+  ls -p --color=always -- "$@" | awk -v cols="$cols" -v cw="$cw" '
+    function S(s){t=s;gsub(/\033\[[0-9;]*m/,"",t);return t}
+    function VL(s){return length(S(s))}
+    function TV(r,n, o,x,c){o="";x=r;c=0;
+      while(x!=""&&c<n){
+        if(match(x,/^\033\[[0-9;]*m/)){
+          o=o substr(x,1,RLENGTH);x=substr(x,RLENGTH+1)
+        }else{o=o substr(x,1,1);x=substr(x,2);++c}
+      }return o}
+    function TC(r,isdir, avail,out){
+      avail=cw-(isdir?1:0); if(avail<1)avail=1
+      if(VL(r)>avail){out=TV(r,avail)}else{out=r}
+      if(isdir){if(VL(out)>=cw)out=TV(out,cw-1)"/";else out=out"/"}
+      return out}
+    {raw[n]=$0; isdir[n]=(S($0)~/\/$/); n++}
+    END{
+      if(!n)exit
+      rows=int((n+cols-1)/cols)
+      for(r=0;r<rows;r++){
+        for(c=0;c<cols;c++){
+          i=r+c*rows
+          if(i<n){
+            cell=TC(raw[i],isdir[i])
+            printf "%s\033[0m",cell
+            pad=cw-VL(cell); if(pad<1)pad=1
+            if(c<cols-1)printf "%" pad "s",""
+          }
+        }
+        print ""
+      }
+    }'
+}
+
+--------------- fits a strict 6-column grid, omits ellipses, ensures one trailing “/” -------------
+
+# l6c: compact 6-column, truncates (no ellipses), single slash for dirs
+l6c(){ 
+  local cols=6 w=${COLUMNS:-80} OPTIND opt
+  while getopts ":w:c:" opt; do case $opt in
+    w) w=$OPTARG;; c) cols=$OPTARG;;
+  esac; done
+  shift $((OPTIND-1))
+  # per-column content width; we reserve 1 space gap explicitly
+  local cw=$(( (w/cols) - 1 )); ((cw<3))&&cw=3
+
+  ls -p --color=always -- "$@" | awk -v cols="$cols" -v cw="$cw" '
+    # Strip ANSI
+    function S(s){ t=s; gsub(/\033\[[0-9;]*m/,"",t); return t }
+    function VL(s){ return length(S(s)) }
+    # Take n visible chars from a colored string
+    function TV(r,n,  o,x,c){ o=""; x=r; c=0;
+      while(x!="" && c<n){
+        if(match(x,/^\033\[[0-9;]*m/)){ o=o substr(x,1,RLENGTH); x=substr(x,RLENGTH+1) }
+        else { o=o substr(x,1,1); x=substr(x,2); ++c }
+      }
+      return o
+    }
+    # Make exactly one trailing slash; first remove any that ls -p added
+    function BASE_NO_SLASH(raw,  vislen){ vislen = VL(raw); return TV(raw, vislen - 1) }
+
+    function CELL(raw,isdir,  target, base, avail, out){
+      # leave one char for inter-column gap; target is the max visible width of the cell
+      target = cw - 1; if (target < 1) target = 1
+      if (isdir) base = BASE_NO_SLASH(raw); else base = raw
+
+      # reserve 1 for "/" if dir
+      avail = target - (isdir ? 1 : 0); if (avail < 1) avail = 1
+
+      # truncate to avail, no ellipsis
+      if (VL(base) > avail) out = TV(base, avail); else out = base;
+
+      # append exactly one slash for dirs
+      if (isdir) {
+        if (VL(out) >= target) out = TV(out, target-1) "/"; else out = out "/";
+      }
+      return out
+    }
+
+    { raw[n]=$0; isdir[n]=(S($0)~/\/$/); n++ }
+
+    END{
+      if (!n) exit
+      rows = int((n + cols - 1) / cols)
+      for (r=0; r<rows; r++) {
+        for (c=0; c<cols; c++) {
+          i = r + c*rows
+          if (i < n) {
+            cell = CELL(raw[i], isdir[i])
+            printf "%s\033[0m", cell    # reset so padding isn’t colored
+            # pad so total visible width <= cw-1; then add the 1-char gap via printf spacing
+            pad = (cw - 1) - VL(cell); if (pad < 1) pad = 1
+            if (c < cols-1) printf "%" pad "s",""
+          }
+        }
+        print ""
+      }
+    }'
+}
+
+-------------- l6c -w 100 -c 7 (custom width/cols) ------------------------
+
+strict(){ local cols=6 w=${COLUMNS:-80} OPTIND opt; while getopts :w:c: opt; do case $opt in w) w=$OPTARG;; c) cols=$OPTARG;; esac; done; shift $((OPTIND-1)); local cw=$(( (w/cols)-1 )); ((cw<3))&&cw=3; ls -p --color=always -- "$@" | awk -v cols="$cols" -v cw="$cw" '
+function S(s){t=s;gsub(/\033\[[0-9;]*m/,"",t);return t}
+function VL(s){return length(S(s))}
+function TV(r,n, o,x,c){o="";x=r;c=0;while(x!=""&&c<n){if(match(x,/^\033\[[0-9;]*m/)){o=o substr(x,1,RLENGTH);x=substr(x,RLENGTH+1)}else{o=o substr(x,1,1);x=substr(x,2);++c}}return o}
+function BASE(raw){return TV(raw,VL(raw)-1)}
+function CELL(raw,isdir, target,base,avail,out){
+  target=cw-2; if(target<1)target=1;                  # stricter by 1 char
+  base=isdir?BASE(raw):raw;
+  avail=target-(isdir?1:0); if(avail<1)avail=1;
+  out=(VL(base)>avail)?TV(base,avail):base;
+  if(isdir){ if(VL(out)>=target) out=TV(out,target-1) "/"; else out=out "/" }
+  return out
+}
+{raw[n]=$0; isdir[n]=(S($0)~/\/$/); n++}
+END{
+  if(!n)exit; rows=int((n+cols-1)/cols);
+  for(r=0;r<rows;r++){
+    for(c=0;c<cols;c++){
+      i=r+c*rows; if(i<n){
+        cell=CELL(raw[i],isdir[i]);
+        printf "%s\033[0m",cell;
+        # pad to (cw-2), then add a single space as the inter-column gap
+        pad=(cw-2)-VL(cell); if(pad<0)pad=0;
+        if(c<cols-1){ for(k=0;k<pad;k++) printf " "; printf " " }
+      }
+    }
+    print ""
+  }
+}'; }
+
+---------------- this fixed the error when l6c_strict -w 100 -c .. is run -------
+
+l6c_strict(){ local cols=6 w=${COLUMNS:-80} OPTIND opt; while getopts ":w:c:-:" opt; do case $opt in w) [[ $OPTARG =~ ^[0-9]+$ ]]&&w=$OPTARG;; c) [[ $OPTARG =~ ^[0-9]+$ ]]&&cols=$OPTARG;; -) break;; :) ;; \?) ;; esac; done; shift $((OPTIND-1)); local cw=$(( (w/cols)-1 )); ((cw<3))&&cw=3; ls -p --color=always -- "$@" | awk -v cols="$cols" -v cw="$cw" 'function S(s){t=s;gsub(/\033\[[0-9;]*m/,"",t);return t} function VL(s){return length(S(s))} function TV(r,n, o,x,c){o="";x=r;c=0;while(x!=""&&c<n){if(match(x,/^\033\[[0-9;]*m/)){o=o substr(x,1,RLENGTH);x=substr(x,RLENGTH+1)}else{o=o substr(x,1,1);x=substr(x,2);++c}}return o} function BASE(raw){return TV(raw,VL(raw)-1)} function CELL(raw,isdir, target,base,avail,out){target=cw-2; if(target<1)target=1; base=isdir?BASE(raw):raw; avail=target-(isdir?1:0); if(avail<1)avail=1; out=(VL(base)>avail)?TV(base,avail):base; if(isdir){ if(VL(out)>=target) out=TV(out,target-1) "/"; else out=out "/" } return out} {raw[n]=$0; isdir[n]=(S($0)~/\/$/); n++} END{if(!n)exit; rows=int((n+cols-1)/cols); for(r=0;r<rows;r++){for(c=0;c<cols;c++){i=r+c*rows; if(i<n){cell=CELL(raw[i],isdir[i]); printf "%s\033[0m",cell; pad=(cw-2)-VL(cell); if(pad<0)pad=0; if(c<cols-1){while(pad--)printf " "; printf " "}}} print ""}}'; }
+
+------------------  

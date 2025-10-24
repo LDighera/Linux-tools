@@ -1,0 +1,15 @@
+#
+#	This script will assist the system administrator in maintaining
+#	a system log of events, configuration changes, and maintenance operations.
+#
+#	Copyright Dighera Data Services Tue Dec 29 15:43:09 PST 1987
+#	Sat 14 Mar 2020 01:50:49 PM PDT LGD: Modified for Raspbian
+#
+
+set -x	#DEBUG
+SLOG=/root/logs/system.log	# This file contains the output of this script
+export SLOG
+[[ -f $SLOG ]] || touch $SLOG	# If log file missing, create it.
+
+echo -e "\n`date`" >> $SLOG
+vi +$ $SLOG
