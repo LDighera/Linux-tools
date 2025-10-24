@@ -1,0 +1,41 @@
+:
+#
+#	Systat:  A script to inform the sys'admin' of the
+#	current status of the system.
+#
+#	Copyright Dighera Data Services Tue Aug  3 13:34:36 PDT 1993
+#
+
+VMSTAT="`vmstat -s`"
+FINGER=`finger`
+UUSTAT=`uustat -q&`
+PS="`ps -ef&`"
+W=`w&`
+#DF="`df -v | awk '$6 > 90 {print $0}'`"&
+
+tput clear
+echo "`tput smso`		 S y s t e m     S t a t u s     R e p o r t `tput rmso`"
+echo "Time Now:`uptime`"
+echo -n "$VMSTAT\c" | awk '{print "		"$0}' 
+echo -n "`vmstat 1 1`"
+echo "Enter to continue \c"
+DF="`df -v | awk '$6 > 90 {print $0}'`"
+read delay;tput clear
+
+echo "`tput smso`		 U s e r      S t a t u s     R e p o r t `tput rmso`\n"
+echo "\nON-SITE USERS: \n$FINGER\n\t\t\t\t* Indicats mesg off"|egrep -v '(1A | 2A|2B|DIALOUT)'
+
+DISP_TMP=`echo "$FINGER\n"| egrep '(1A | 2A | 2B)'`
+[ -z "$DISP_TMP" ] || DISP_DAT=$DISP_DAT$DISP_TMP
+DISP_TMP=`echo "$UUSTAT"|fgrep "Locked TALKING"`
+[ -z "$DISP_TMP" ] || DISP_DAT="$DISP_DAT\n$DISP_TMP"
+DISP_TMP=`echo "$W"|egrep '(DIALOUT|1A|2A|2B)'`
+[ -z "$DISP_TMP" ] || DISP_DAT="$DISP_DAT\n$DISP_TMP"
+[ -n "$DISP_DAT" -a "$DISP_DAT" != "\n\n" ] && echo "\nMODEM TELECOMMUNICATION IN PROGRESS:"
+echo "$DISP_DAT"|sort
+wait
+if [ `echo "$DF" | wc -l` -gt 1 ]
+then
+	echo "\n`tput smso`	 Filesystem Free-Space Alert \07`tput rmso`\n$DF"
+fi
+

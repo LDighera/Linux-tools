@@ -1,0 +1,2 @@
+lsblk -f
+blkid
