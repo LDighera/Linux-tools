@@ -1,4 +1,8 @@
-cat $(type decimal.sh|cut -d" " -f7); exit
+#!/usr/bin/env bash
+# ascii-chart.sh — Print ASCII tables (decimal & octal) and control-key map.
+# Usage: ./ascii-chart.sh
+
+cat <<'EOF'
 #
 # Decimal ASCII Chart
 #
@@ -20,44 +24,41 @@ cat $(type decimal.sh|cut -d" " -f7); exit
 |112  p |113  q |114  r |115  s |116  t |117  u |118  v |119  w |
 |120  x |121  y |122  z |123  { |124  | |125  } |126  ~ |127 del|
 
-# Control Keys
-|000 ^2 |001 ^A |002 ^B |003 ^C |004 ^D |005 ^E |006 ^F |007 ^G |
+# Control Keys (Decimal code → caret notation)
+|000 ^@ |001 ^A |002 ^B |003 ^C |004 ^D |005 ^E |006 ^F |007 ^G |
 |008 ^H |009 ^I |010 ^J |011 ^K |012 ^L |013 ^M |014 ^N |015 ^O |
 |016 ^P |017 ^Q |018 ^R |019 ^S |020 ^T |021 ^U |022 ^V |023 ^W |
-|024 ^X |025 ^Y |026 ^Z |027 ^[ |028 ^\ |029 ^] |030 ^6 |031 ^- |
-|127 ^Backspace
-
+|024 ^X |025 ^Y |026 ^Z |027 ^[ |028 ^\ |029 ^] |030 ^^ |031 ^_ |
+|127 ^? |
 
 #
 # Octal ASCII Chart
 #
 
 	\0NNN  byte with octal value NNN (1 to 3 digits)
-	echo $'\xc2\xb0'	# Display the degree symbol
-
+	echo $'\xc2\xb0'	# degree symbol (UTF-8)
 
 |000 nul|001 soh|002 stx|003 etx|004 eot|005 enq|006 ack|007 bel|
 |010 bs |011 ht |012 nl |013 vt |014 ff |015 cr |016 so |017 si |
 |020 dle|021 dc1|022 dc2|023 dc3|024 dc4|025 nak|026 syn|027 etb|
 |030 can|031 em |032 sub|033 esc|034 fs |035 gs |036 rs |037 us |
-|040 sp |041  ! |042  " |033  # |034  $ |045  % |046  & |047  ' |
+|040 sp |041  ! |042  " |043  # |044  $ |045  % |046  & |047  ' |
 |050  ( |051  ) |052  * |053  + |054  , |055  - |056  . |057  / |
 |060  0 |061  1 |062  2 |063  3 |064  4 |065  5 |066  6 |067  7 |
 |070  8 |071  9 |072  : |073  ; |074  < |075  = |076  > |077  ? |
 |100  @ |101  A |102  B |103  C |104  D |105  E |106  F |107  G |
 |110  H |111  I |112  J |113  K |114  L |115  M |116  N |117  O |
 |120  P |121  Q |122  R |123  S |124  T |125  U |126  V |127  W |
-|130  X |131  Y |132  Z |133  [ |034  \ |135  ] |136  ^ |137  _ |
+|130  X |131  Y |132  Z |133  [ |134  \ |135  ] |136  ^ |137  _ |
 |140  ` |141  a |142  b |143  c |144  d |145  e |146  f |147  g |
 |150  h |151  i |152  j |153  k |154  l |155  m |156  n |157  o |
 |160  p |161  q |162  r |163  s |164  t |165  u |166  v |167  w |
 |170  x |171  y |172  z |173  { |174  | |175  } |176  ~ |177 del|
 
-# Control Keys
-|000 ^2 |001 ^A |002 ^B |003 ^C |004 ^D |005 ^E |006 ^F |007 ^G |
+# Control Keys (Octal code → caret notation)
+|000 ^@ |001 ^A |002 ^B |003 ^C |004 ^D |005 ^E |006 ^F |007 ^G |
 |010 ^H |011 ^I |012 ^J |013 ^K |014 ^L |015 ^M |016 ^N |017 ^O |
 |020 ^P |021 ^Q |022 ^R |023 ^S |024 ^T |025 ^U |026 ^V |027 ^W |
-|030 ^X |031 ^Y |032 ^Z |033 ^[ |034 ^\ |035 ^] |036 ^6 |037 ^- |
-|040 ^Backspace
-
-see: man ascii and others...
+|030 ^X |031 ^Y |032 ^Z |033 ^[ |034 ^\ |035 ^] |036 ^^ |037 ^_ |
+|177 ^? |
+EOF
