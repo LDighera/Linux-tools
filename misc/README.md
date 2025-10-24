@@ -13,7 +13,8 @@ Includes helpers for automation, text processing, and environment setup.
 ## Scripts
 
 - `apt.sh` — initialize the package system and update files and system.
-- `block_cursor.sh`
+- `auto-update-on-off.sh` — enable/disable unattended-updates.
+- `block_cursor.sh` — make the cursor more visible.
 - `bright` — turn on bright text display.
 - `cups_adm.sh`
 - `cups_restart.sh`
