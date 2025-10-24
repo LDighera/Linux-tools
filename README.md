@@ -82,5 +82,3 @@ This project is released under the **MIT License**.
 See `LICENSE` for details.
 
 ---
-
-Would you like me to include a short “About the Author” section referencing your background as an IBEW Journeyman Inside Wireman and Linux systems builder? It would personalize the repository.
