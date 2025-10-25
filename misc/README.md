@@ -47,4 +47,5 @@ Includes helpers for automation, text processing, and environment setup.
 - `spell`
 - `start_ftp_daemon.sh`
 - `timemath.sh` — Do time mathmatics on years, months, days, hours, minutes, seconds.
+- `timemath-release.zip` — Time mathmatics: Improved version of above with man-page and installation script.
 - `typfil.sh` — Display a file's type and location.
