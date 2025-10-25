@@ -21,30 +21,30 @@ Includes helpers for automation, text processing, and environment setup.
 - `d-funct` — menu-driven `cd` helper for bash/ksh; add to `.profile`/`.bashrc`.
 - `decimal.sh` — display ASCII chart.
 - `dim` — turn off bright text display.
-- `find-in-history.sh`
-- `find-size.sh`
-- `find_dirs.sh`
-- `find_large.sh`
-- `find_ls.sh`
-- `find_ls_fil.sh`
-- `find_txt.sh`
-- `get-tools.sh`
-- `get.sh`
+- `find-in-history.sh` — Search ALL your command-line history.
+- `find-size.sh` — Find files of a particular size.
+- `find_dirs.sh` — Find only directories.
+- `find_large.sh` — Find large files.
+- `find_ls.sh` — Find files by name and display their full listing.
+- `find_ls_fil.sh` — Find files by name and display their listing and type.
+- `find_txt.sh` — Search for files containing specific text.
+- `get-tools.sh` — Install all the packages you require after generating a new OS.
+- `get.sh` — Install packages and log the process.
 - `history.sh`
-- `isitrunning.sh`
-- `l`
-- `log`
+- `isitrunning.sh` — Search for running programs.
+- `l` — List files in a very compact display format.
+- `log` — Keep a log.  See: readlog.sh.
 - `lp.sh`
 - `lp_stat.sh`
 - `my_open_files.sh`
-- `nocr.sh`
-- `nowspell`
+- `nocr.sh` — Scrub text files of there Windows end of line characters for use under Linux.
+- `nowspell` — Spellcheck your text documents.
 - `package.sh`
-- `prompt`
-- `readlog.sh`
-- `show.sh`
-- `sounds.sh`
+- `prompt` — My command-line terminal prompt displays current working directory and terminal numbers.
+- `readlog.sh` — Read your log notes created with log.sh.
+- `show.sh` — Search for packages and display their description.
+- `sounds.sh` — Play sound files for selection.
 - `spell`
 - `start_ftp_daemon.sh`
-- `timemath.sh`
-- `typfil.sh`
+- `timemath.sh` — Do time mathmatics on years, months, days, hours, minutes, seconds.
+- `typfil.sh` — Display a file's type and location.
