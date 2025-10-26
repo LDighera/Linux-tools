@@ -1,3 +1,7 @@
+# LGD: Saturday, October 25, 2025 1705 PDT  LDighera@att.net
+# A menu-driven function to assist in ascending/desending the directory-tree hierachy.  
+# Place in ~/.profile and/or .bashrc.
+
 d() {
   # 1) If an argument is given, cd to it.
   if [ $# -gt 0 ]; then
